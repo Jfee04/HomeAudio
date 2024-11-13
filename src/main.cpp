@@ -5,6 +5,7 @@
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 #define ADC_MAX 1023
+#define VOLT_TO_ADC (1023.0/5.0)
 #define SAMPLE_PEAK 1
 #define ADJUSTED_ADC_MAX (ADC_MAX*SAMPLE_PEAK/5)
 #define FPS 24
@@ -77,9 +78,9 @@ void takeSample(){
 
 
   // Scale the ADC value (0 to 1023) to a height on the OLED
-  int bassHeight = map(bassPeak, 0, MEAURED_ADC_MAX, 0, maxBarHeight);
-  int midHeight = map(midPeak, 0, MEAURED_ADC_MAX, 0, maxBarHeight);
-  int trebleHeight = map(treblePeak, 0, MEAURED_ADC_MAX, 0, maxBarHeight);
+  int bassHeight = map(bassPeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
+  int midHeight = map(midPeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
+  int trebleHeight = map(treblePeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
 
   // Smooth transitions using exponential smoothing
   smoothedBass = alpha * bassHeight + (1 - alpha) * smoothedBass;
@@ -99,3 +100,43 @@ void updateDisplay(){
 
   display.display();
 }
+
+
+void displayx(char x){
+  display.clearDisplay();             // Clear the buffer
+  display.setTextSize(2);             // Set text size to 2 for larger text
+  display.setTextColor(SSD1306_WHITE);// Set text color to white
+  display.setCursor(0, 0);            // Set cursor position at top-left corner
+  display.print(x);             // Print "Hello" on the display
+  display.display();                  // Display the text
+}
+
+
+
+//test 
+// #include <Adafruit_GFX.h>
+// #include <Adafruit_SSD1306.h>
+
+// #define SCREEN_WIDTH 128
+// #define SCREEN_HEIGHT 64
+// #define OLED_RESET -1
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// void setup() {
+//   // Initialize the OLED display
+//   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // 0x3C is the I2C address for most OLEDs
+//     Serial.println(F("OLED allocation failed"));
+//     for (;;); // Stop if the display cannot be initialized
+//   }
+
+//   display.clearDisplay();             // Clear the buffer
+//   display.setTextSize(2);             // Set text size to 2 for larger text
+//   display.setTextColor(SSD1306_WHITE);// Set text color to white
+//   display.setCursor(0, 0);            // Set cursor position at top-left corner
+//   display.print("Hello");             // Print "Hello" on the display
+//   display.display();                  // Display the text
+// }
+
+// void loop() {
+//   // Nothing needed here for static display
+// }
