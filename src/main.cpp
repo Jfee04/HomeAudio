@@ -11,6 +11,8 @@
 #define FPS 24
 #define DEBUG 1
 #define MEAURED_ADC_MAX 1023
+#define SAMPLE_SIZE 50
+
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -22,22 +24,35 @@ const int maxBarHeight = 60; // Maximum height for bars on OLED
 const int barWidth = 30;     // Width for each bar
 const int samplingInterval = (1/FPS)*1000; // Sampling interval in milliseconds
 
-float bassPeak = 0, midPeak = 0, treblePeak = 0;
-float smoothedBass = 0, smoothedMid = 0, smoothedTreble = 0;
-float alpha = 0.2; // Smoothing factor
 
 //measurment variables
-float bassADCMax = 0, midADCMax = 0, trebleADCMax = 0;
+uint8_t bassPeak = 0, midPeak = 0, treblePeak = 0;
+uint8_t smoothedBass = 0, smoothedMid = 0, smoothedTreble = 0;
+float alpha = 0.2; // Smoothing factor
+int8_t bassBuffer[SAMPLE_SIZE] = {0};
+int8_t midBuffer[SAMPLE_SIZE] = {0};
+int8_t trebleBuffer[SAMPLE_SIZE] = {0};
+uint8_t sampleIndex = 0;
 
 unsigned long previousMillis = 0;
 uint8_t printCounter = 0;
 
 void takeSample();
 void updateDisplay();
+int8_t calculateAmplitude(int8_t *buffer);
+void displayx(char x);
+
+int freeMemory() {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
 
 void setup() {
   Serial.begin(9600);
-  while(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)){
+  Serial.print("Free Memory: ");
+  Serial.println(freeMemory());
+  while(!display.begin(SSD1306_SWITCHCAPVCC, 0x3D)){
     Serial.println(F("OLED allocation failed"));
   }
   display.clearDisplay();
@@ -55,30 +70,25 @@ void loop() {
 
 
 void takeSample(){
-    // Read peak values from each frequency band (simulate or real-time values)
-  bassPeak = analogRead(bassPin);
-  midPeak = analogRead(midPin);
-  treblePeak = analogRead(treblePin);
+  // Read peak values from each frequency band (simulate or real-time values)
+  bassBuffer[sampleIndex] = analogRead(bassPin) * (1023/127);
+  midBuffer[sampleIndex] = analogRead(midPin)* (1023/127);
+  trebleBuffer[sampleIndex] = analogRead(treblePin)* (1023/127);
 
-  //changed the debug define to 1 to print
-  if(DEBUG && printCounter >= 10){
-    printCounter = 0;
+  //circluar increment
+  sampleIndex = (sampleIndex + 1) % SAMPLE_SIZE;
 
-    bassADCMax = (bassPeak > bassADCMax) ? bassPeak : bassADCMax;
-    midADCMax = (midPeak > midADCMax) ? midPeak : midADCMax;
-    trebleADCMax = (treblePeak > trebleADCMax) ? treblePeak : trebleADCMax;
-    Serial.print("bass max: ");
-    Serial.println(bassADCMax);
-    Serial.print("mid max: ");
-    Serial.println(midADCMax);
-    Serial.print("treble max: ");
-    Serial.println(trebleADCMax);
-    Serial.println();
-  }
 
+
+  //get amplitude
+  bassPeak = calculateAmplitude(bassBuffer);
+  midPeak = calculateAmplitude(midBuffer);
+  treblePeak = calculateAmplitude(trebleBuffer);
+
+ 
 
   // Scale the ADC value (0 to 1023) to a height on the OLED
-  int bassHeight = map(bassPeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
+  int bassHeight = map(bassPeak, 0, 127, 0, maxBarHeight);
   int midHeight = map(midPeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
   int trebleHeight = map(treblePeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
 
@@ -86,6 +96,10 @@ void takeSample(){
   smoothedBass = alpha * bassHeight + (1 - alpha) * smoothedBass;
   smoothedMid = alpha * midHeight + (1 - alpha) * smoothedMid;
   smoothedTreble = alpha * trebleHeight + (1 - alpha) * smoothedTreble;
+   //changed the debug define to 1 to print
+  if(DEBUG && printCounter >= 10){
+    Serial.println(smoothedBass);
+  }
 }
 
 
@@ -99,6 +113,24 @@ void updateDisplay(){
   display.fillRect(90, SCREEN_HEIGHT - smoothedTreble, barWidth, smoothedTreble, SSD1306_WHITE);
 
   display.display();
+}
+
+int8_t calculateAmplitude(int8_t *buffer) {
+  // Calculate the DC offset
+  // long sum = 0;
+  // for (int i = 0; i < SAMPLE_SIZE; i++) {
+  //   sum += buffer[i];
+  // }
+  // float mean = sum / (float)SAMPLE_SIZE;
+
+  // Calculate peak-to-peak
+  int8_t maxVal = 0, minVal = ADC_MAX;
+  for (int i = 0; i < SAMPLE_SIZE; i++) {
+    if (buffer[i] > maxVal) maxVal = buffer[i];
+    if (buffer[i] < minVal) minVal = buffer[i];
+  }
+
+  return (maxVal - minVal) / 2; // Return half peak-to-peak as amplitude
 }
 
 
