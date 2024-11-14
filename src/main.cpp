@@ -4,11 +4,11 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-#define ADC_MAX 1023
+#define ADC_MAX (1023)
 #define VOLT_TO_ADC (1023.0/5.0)
 #define SAMPLE_PEAK 1
 #define ADJUSTED_ADC_MAX (ADC_MAX*SAMPLE_PEAK/5)
-#define SPS (400)  //the screen should update 24 times per second and it will update after all samples have been taken
+#define SPS (800)  //the screen should update 24 times per second and it will update after all samples have been taken
 #define DEBUG 1
 #define MEAURED_ADC_MAX 1023
 #define SAMPLE_SIZE 50
@@ -26,8 +26,9 @@ const int samplingInterval = (1/SPS)*1000; // Sampling interval in milliseconds
 
 
 //measurment variables
-uint8_t bassPeak = 0, midPeak = 0, treblePeak = 0;
+uint8_t bassAmplitude = 0, midPeak = 0, treblePeak = 0;
 uint8_t smoothedBass = 0, smoothedMid = 0, smoothedTreble = 0;
+uint8_t mean = 0, maxVal = 0, minVal;
 float alpha = 0.2; // Smoothing factor
 uint8_t bassBuffer[SAMPLE_SIZE] = {0};
 uint8_t midBuffer[SAMPLE_SIZE] = {0};
@@ -82,12 +83,12 @@ void takeSample(){
   sampleIndex = (sampleIndex + 1) % SAMPLE_SIZE;
 
   //get amplitude
-  bassPeak = calculateAmplitude(bassBuffer);
+  bassAmplitude = calculateAmplitude(bassBuffer);
   midPeak = calculateAmplitude(midBuffer);
   treblePeak = calculateAmplitude(trebleBuffer);
 
   // Scale the ADC value (0 to 1023) to a height on the OLED
-  int bassHeight = map(bassPeak, 0, 255, 0, maxBarHeight);
+  int bassHeight = map(bassAmplitude, 0, 125, 0, maxBarHeight);
   int midHeight = map(midPeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
   int trebleHeight = map(treblePeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
 
@@ -99,15 +100,15 @@ void takeSample(){
   if(DEBUG && printCounter >= 50 && 0){
     printCounter = 0;
 
-    Serial.print("bassBuffer: ");
-    for (int i = 0; i < SAMPLE_SIZE; i++) {
-      Serial.print(bassBuffer[i]);
-      Serial.print(", ");
-    }
-    Serial.println();
+    // Serial.print("bassBuffer: ");
+    // for (int i = 0; i < SAMPLE_SIZE; i++) {
+    //   Serial.print(bassBuffer[i]);
+    //   Serial.print(", ");
+    // }
+    // Serial.println();
 
     Serial.print("bassPeak: ");
-    Serial.println(bassPeak);
+    Serial.println(bassAmplitude);
 
     Serial.print("bassHeight: ");
     Serial.println(bassHeight);
@@ -141,7 +142,7 @@ void updateDisplay(){
     Serial.println();
 
     Serial.print("bassPeak: ");
-    Serial.println(bassPeak);
+    Serial.println(bassAmplitude);
 
     Serial.print("smoothedBass: ");
     Serial.println(smoothedBass);
@@ -162,15 +163,14 @@ uint8_t calculateAmplitude(uint8_t *buffer) {
   for (int i = 0; i < SAMPLE_SIZE; i++) {
     sum += buffer[i];
   }
-  float mean = sum / (float)SAMPLE_SIZE;
+  mean = sum / SAMPLE_SIZE;
 
   // Calculate peak-to-peak
-  uint8_t maxVal = 0, minVal = ADC_MAX;
+  maxVal = 0, minVal = ADC_MAX;
   for (int i = 0; i < SAMPLE_SIZE; i++) {
     if (buffer[i] > maxVal) maxVal = buffer[i];
     if (buffer[i] < minVal) minVal = buffer[i];
   }
-
   return (maxVal - minVal) / 2; // Return half peak-to-peak as amplitude
 }
 
