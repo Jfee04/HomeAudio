@@ -8,7 +8,7 @@
 #define VOLT_TO_ADC (1023.0/5.0)
 #define SAMPLE_PEAK 1
 #define ADJUSTED_ADC_MAX (ADC_MAX*SAMPLE_PEAK/5)
-#define SPS (800)  //the screen should update 24 times per second and it will update after all samples have been taken
+#define SPS (10000)  //the screen should update 24 times per second and it will update after all samples have been taken
 #define DEBUG 1
 #define MEAURED_ADC_MAX 1023
 #define SAMPLE_SIZE 50
@@ -26,7 +26,7 @@ const int samplingInterval = (1/SPS)*1000; // Sampling interval in milliseconds
 
 
 //measurment variables
-uint8_t bassAmplitude = 0, midPeak = 0, treblePeak = 0;
+uint8_t bassAmplitude = 0, midAmplitude = 0, trebleAmplitude = 0;
 uint8_t smoothedBass = 0, smoothedMid = 0, smoothedTreble = 0;
 uint8_t mean = 0, maxVal = 0, minVal;
 float alpha = 0.2; // Smoothing factor
@@ -76,21 +76,21 @@ void loop() {
 void takeSample(){
   // Read peak values from each frequency band (simulate or real-time values)
   bassBuffer[sampleIndex] = map(analogRead(bassPin), 0, 1023, 0, 225);
-  midBuffer[sampleIndex] = analogRead(midPin)* (1023.0/127.0);
-  trebleBuffer[sampleIndex] = analogRead(treblePin)* (1023.0/127.0);
+  midBuffer[sampleIndex] = map(analogRead(midPin), 0, 1023, 0, 225);
+  trebleBuffer[sampleIndex] = map(analogRead(treblePin), 0, 1023, 0, 225);
 
   //circluar increment
   sampleIndex = (sampleIndex + 1) % SAMPLE_SIZE;
 
   //get amplitude
   bassAmplitude = calculateAmplitude(bassBuffer);
-  midPeak = calculateAmplitude(midBuffer);
-  treblePeak = calculateAmplitude(trebleBuffer);
+  midAmplitude = calculateAmplitude(midBuffer);
+  trebleAmplitude = calculateAmplitude(trebleBuffer);
 
   // Scale the ADC value (0 to 1023) to a height on the OLED
   int bassHeight = map(bassAmplitude, 0, 125, 0, maxBarHeight);
-  int midHeight = map(midPeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
-  int trebleHeight = map(treblePeak, 2.5 * VOLT_TO_ADC, ADC_MAX, 0, maxBarHeight);
+  int midHeight = map(midAmplitude, 0, 125, 0, maxBarHeight);
+  int trebleHeight =map(trebleAmplitude, 0, 125, 0, maxBarHeight);
 
   // Smooth transitions using exponential smoothing
   smoothedBass = alpha * bassHeight + (1 - alpha) * smoothedBass;
@@ -134,18 +134,18 @@ void updateDisplay(){
   }
 
   if(DEBUG){
-    Serial.print("bassBuffer: ");
+    Serial.print("Buffer: ");
     for (int i = 0; i < SAMPLE_SIZE; i++) {
-      Serial.print(bassBuffer[i]);
+      Serial.print(trebleBuffer[i]);
       Serial.print(", ");
     }
     Serial.println();
 
-    Serial.print("bassPeak: ");
-    Serial.println(bassAmplitude);
+    Serial.print("treblePeak: ");
+    Serial.println(trebleAmplitude);
 
-    Serial.print("smoothedBass: ");
-    Serial.println(smoothedBass);
+    Serial.print("smoothedtreble: ");
+    Serial.println(smoothedTreble);
     Serial.println();
   }
 
