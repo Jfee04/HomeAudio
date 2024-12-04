@@ -1,5 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Wire.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -57,6 +58,64 @@ void setup() {
     Serial.println(F("OLED allocation failed"));
   }
   display.clearDisplay();
+
+
+  //welcome screen
+  display.display();
+
+  display.setCursor(4,1);
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.print("Home Audio System\n");
+  display.display();
+  delay(1000);
+  display.setTextSize(1);
+  display.print("\n      ECE:2804");
+  display.display();
+  delay(2000);
+
+  display.clearDisplay();
+
+  display.setCursor(1,33);
+  display.setTextSize(2);
+  display.print("createdy\nby:");
+  display.display();
+  delay(1500);
+
+  display.clearDisplay();
+
+  display.setCursor(25, 16);
+  display.setTextSize(1);
+  display.print(" Parker Adams\n             &\n      JJ Feeney");
+  display.display();
+  delay(3000);
+  display.clearDisplay();
+  //end welcome screen
+
+
+  //PWM code
+  // Set pin 9 (OC1A) as output
+  pinMode(9, OUTPUT);
+
+  // Reset Timer1 control registers
+  TCCR1A = 0;
+  TCCR1B = 0;
+
+  // Set Timer1 to Fast PWM mode with ICR1 as the TOP value
+  // Non-inverted PWM on OC1A (pin 9)
+  TCCR1A = (1 << COM1A1) | (1 << WGM11);
+  
+  // Set prescaler to 1 (no prescaling) and WGM13:WGM12 to Fast PWM mode with ICR1 as TOP
+  TCCR1B = (1 << WGM13) | (1 << WGM12) | (0 << CS12) | (0 << CS11) | (1 << CS10);
+  
+  // Set TOP value for 90 kHz frequency
+  ICR1 = 177;
+  
+  // Set the duty cycle to 50% (OCR1A = ICR1 / 2)
+  OCR1A = 88;
+
+
+
 }
 
 void loop() {
@@ -69,7 +128,6 @@ void loop() {
   if(sampleIndex == 0){
     updateDisplay();
   }
-
 }
 
 
@@ -88,9 +146,9 @@ void takeSample(){
   trebleAmplitude = calculateAmplitude(trebleBuffer);
 
   // Scale the ADC value (0 to 1023) to a height on the OLED
-  int bassHeight = map(bassAmplitude, 0, 125, 0, maxBarHeight);
-  int midHeight = map(midAmplitude, 0, 125, 0, maxBarHeight);
-  int trebleHeight =map(trebleAmplitude, 0, 125, 0, maxBarHeight);
+  int bassHeight = map(bassAmplitude, 0, 60, 0, maxBarHeight);
+  int midHeight = map(midAmplitude, 0, 60, 0, maxBarHeight);
+  int trebleHeight =map(trebleAmplitude, 0, 60, 0, maxBarHeight);
 
   // Smooth transitions using exponential smoothing
   smoothedBass = alpha * bassHeight + (1 - alpha) * smoothedBass;
