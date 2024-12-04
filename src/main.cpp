@@ -146,9 +146,9 @@ void takeSample(){
   trebleAmplitude = calculateAmplitude(trebleBuffer);
 
   // Scale the ADC value (0 to 1023) to a height on the OLED
-  int bassHeight = map(bassAmplitude, 0, 60, 0, maxBarHeight);
-  int midHeight = map(midAmplitude, 0, 60, 0, maxBarHeight);
-  int trebleHeight =map(trebleAmplitude, 0, 60, 0, maxBarHeight);
+  int bassHeight = map(bassAmplitude, 0, 15, 0, maxBarHeight);
+  int midHeight = map(midAmplitude, 0, 15, 0, maxBarHeight);
+  int trebleHeight =map(trebleAmplitude, 0, 15, 0, maxBarHeight);
 
   // Smooth transitions using exponential smoothing
   smoothedBass = alpha * bassHeight + (1 - alpha) * smoothedBass;
